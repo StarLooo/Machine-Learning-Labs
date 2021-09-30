@@ -75,10 +75,10 @@ def draw_rmse_order_graph(training_times: int = 1000, train_method="analytic", t
                                                     verbose=False)
                 w, train_rmse, test_rmse = None, None, None
                 if train_method == "analytic":
-                    w, train_rmse, test_rmse = pr.train(train_method, train_param, draw_result=True)
+                    w, train_rmse, test_rmse = pr.train(train_method, train_param, draw_result=False)
                 elif train_method == "gradient descent":
                     w, train_rmse, test_rmse, iter_times, train_loss_list = pr.train(train_method, train_param,
-                                                                                     draw_result=False)
+                                                                                     draw_result=True)
                 mean_train_rmse += train_rmse
                 mean_test_rmse += test_rmse
             mean_train_rmse_list.append(mean_train_rmse / training_times)
@@ -286,10 +286,10 @@ def show_compare_method():
 
 if __name__ == '__main__':
     # draw_data_generate()
-    # draw_rmse_order_graph()
+    draw_rmse_order_graph()
     # draw_rmse_order_graph(10, "gradient descent", [0.1, 100000, 1e-6])
     # draw_rmse_l2_coefficient_graph()
     # find_best_l2_coefficient_graph()
     # show_compare_regular()
     # find_best_lr()
-    show_compare_method()
+    # show_compare_method()

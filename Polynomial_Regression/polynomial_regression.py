@@ -1,25 +1,26 @@
 # -*- coding: UTF-8 -*-
 from abc import ABC
 
+import numpy as np
+
 from utils import *
 import abc
 
 
 class Optimizer(metaclass=abc.ABCMeta):
-    def __init__(self, optimizer_name, train_param, hyper_params, verbose=False):
-        self.optimizer_name = optimizer_name
+    def __init__(self, train_param, hyper_params, verbose=False):
         self.train_param = train_param
         self.hyper_params = hyper_params
         self.verbose = verbose
 
     @abc.abstractmethod
-    def step(self):
+    def train(self):
         pass
 
 
 class Analytic_Optimizer(Optimizer, ABC):
-    def __init__(self, optimizer_name, train_param, hyper_params, loss_func, analytic_func, verbose=False):
-        super().__init__(optimizer_name, train_param, hyper_params, verbose)
+    def __init__(self, train_param, hyper_params, loss_func, analytic_func, verbose=False):
+        super().__init__(train_param, hyper_params, verbose)
         self.loss_func = loss_func
         self.analytic_func = analytic_func
 
@@ -28,31 +29,33 @@ class Analytic_Optimizer(Optimizer, ABC):
             print("optimize with analytic method.")
         self.train_param = self.analytic_func()
         train_loss = self.loss_func(self.train_param)
+        if self.verbose:
+            print("analytic solve finished.")
         return self.train_param, train_loss
 
 
 class Gradient_Descent_Optimizer(Optimizer, ABC):
-    def __init__(self, optimizer_name, train_param, hyper_params, loss_func, grad_func, verbose=False):
-        super().__init__(optimizer_name, train_param, hyper_params, verbose)
+    def __init__(self, train_param, hyper_params, loss_func, grad_func, verbose=False):
+        super().__init__(train_param, hyper_params, verbose)
         self.lr, self.max_iter_times, self.epsilon = hyper_params
         assert self.lr > 0. and self.max_iter_times > 0 and self.epsilon >= 0.
         self.loss_func = loss_func
         self.grad_func = grad_func
 
-    def step(self):
+    def train(self):
         if self.verbose:
             print("optimize with gradient descent.")
-
         train_loss = self.loss_func(self.train_param)
         train_loss_list = []
+        latest_grad = None
         actual_iter_times = 0
         for iter_num in range(1, self.max_iter_times + 1):
             actual_iter_times = iter_num
             pre_loss = train_loss  # 上一次迭代的loss
-            train_loss_list.append(train_loss)
+            train_loss_list.append(train_loss)  # 记录train_loss
             pre_param = self.train_param  # 上一次迭代的w
-            grad = self.grad_func(self.train_param)  # 求梯度
-            new_param = self.train_param - grad * self.train_param  # 梯度下降
+            latest_grad = self.grad_func(self.train_param)  # 求梯度
+            new_param = self.train_param - latest_grad * self.train_param  # 梯度下降
             train_loss = self.loss_func(self.train_param)  # 计算本次迭代后的训练误差
             # 若loss不再下降，则不更新参数，并减半学习率
             if train_loss >= pre_loss:
@@ -60,16 +63,67 @@ class Gradient_Descent_Optimizer(Optimizer, ABC):
                 train_loss = pre_loss
             # 否则更新参数
             self.train_param = new_param
-            # 若loss下降小于阈值，则退出循环
+
+            # 若loss下降小于阈值，则训练结束，退出循环
             if pre_loss - train_loss < self.epsilon:
                 if self.verbose:
                     print("gradient descent finished, actual iter times:", actual_iter_times)
                 break
-            # 若迭代次数达到上限，则退出循环，结束训练
-            if iter_num == self.max_iter_times:
+            # 若迭代次数达到上限，训练结束
+            if actual_iter_times == self.max_iter_times:
                 if self.verbose:
                     print("iter too many times, terminate train!")
         train_loss_list.append(train_loss)
+
+        return self.train_param, actual_iter_times, train_loss_list, latest_grad
+
+
+class Conjugate_Gradient_Optimizer(Optimizer, ABC):
+    def __init__(self, train_param, hyper_params, A, b, loss_func, verbose=False):
+        super().__init__(train_param, hyper_params, verbose)
+        self.max_iter_times, self.epsilon = hyper_params
+        assert self.max_iter_times > 0 and self.epsilon >= 0.
+        assert A.shape[0] == b.shape[0]
+        self.A = A
+        self.b = b
+        self.loss_func = loss_func
+
+    def train(self):
+        if self.verbose:
+            print("optimize with conjugate gradient.")
+        train_loss_list = []
+        train_loss = self.loss_func(self.train_param)
+        actual_iter_times = 0
+
+        r = self.b - np.matmul(self.A, self.train_param)
+        p = r
+        for iter_num in range(1, self.max_iter_times + 1):
+            actual_iter_times = iter_num
+            pre_loss = train_loss  # 上一次迭代的loss
+            train_loss_list.append(train_loss)  # 记录train_loss
+            pre_param = self.train_param  # 上一次迭代的w
+            old_r_inner_product = np.matmul(r.transpose(), r)
+            alpha = old_r_inner_product / np.matmul(np.matmul(p.transpose(), self.A), p)
+            self.train_param = self.train_param + alpha * p
+            r = r - alpha * np.matmul(self.A, p)
+            new_r_inner_product = np.matmul(r.transpose(), r)
+            beta = new_r_inner_product / old_r_inner_product
+            p = r + beta * p
+
+            # 计算本次迭代后的训练误差
+            train_loss = self.loss_func()
+            assert train_loss < pre_loss
+            # 残差r的L1-norm小于阈值，则训练结束，退出循环
+            if np.max(np.abs(r)) < self.epsilon:
+                if self.verbose:
+                    print("conjugate gradient finished, actual iter times:", actual_iter_times)
+                break
+            if iter_num == actual_iter_times:
+                if self.verbose:
+                    print("iter too many times, terminate train!")
+        train_loss_list.append(train_loss)
+
+        return self.train_param, actual_iter_times, train_loss_list
 
 
 class Polynomial_Regression_Class:
@@ -109,17 +163,29 @@ class Polynomial_Regression_Class:
     def _rmse(self, y_pred, y_true, w):
         return np.sqrt((2 / len(y_pred)) * self._mse_loss_with_l2_norm_regular(y_pred, y_true, w))
 
-    def _solve_analytic(self, draw_result=False):
-        # 求出w的解析解
+    def _solve_analytic(self, draw_result: bool = False):
+        w = np.empty(self.m + 1)
         X = np.vander(self.train_x_array, self.m + 1)
         X_t = X.transpose()
         X_t_mul_X = np.matmul(X_t, X)
         A = X_t_mul_X + self.l2_norm_coefficient * np.eye(self.m + 1)
         A_pinv = np.linalg.pinv(A)
         b = np.matmul(X_t, self.train_y_array)
-        w = np.matmul(A_pinv, b)
 
-        # 计算训练集和测试集上的预测值
+        # 传入Analytic_Optimizer的解析法求解函数
+        def analytic_func():
+            return np.matmul(A_pinv, b)
+
+        # 传入Analytic_Optimizer的train_loss计算函数
+        def loss_func(w):
+            y_pred_train = np.matmul(X, w)
+            loss = self._mse_loss_with_l2_norm_regular(y_pred_train, self.train_y_array, w)
+            return loss
+
+        analytic_opt = Analytic_Optimizer(w, None, loss_func, analytic_func, self.verbose)  # 初始化Analytic_Optimizer
+        w, train_loss = analytic_opt.train()  # 使用解析法求出w的解析解以及train_loss
+
+        # 计算测试集上的预测值
         y_pred_train = np.matmul(X, w)
         y_pred_test = np.matmul(np.vander(self.test_x_array, self.m + 1), w)
         # 计算训练集和测试集上的均方根误差
