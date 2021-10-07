@@ -1,7 +1,5 @@
 # -*- coding: UTF-8 -*-
 from utils import *
-import abc
-from abc import ABC
 
 
 class Polynomial_Regression_Class:
@@ -115,6 +113,7 @@ class Polynomial_Regression_Class:
             print("L1-norm of latest gradient:", np.max(latest_grad))
             print("w:", w)
             print("train_loss:", train_loss_list[-1])
+            print("actual iter times:", actual_iter_times)
 
         # 计算训练集和测试集上的预测值
         y_pred_train = np.matmul(X, w)

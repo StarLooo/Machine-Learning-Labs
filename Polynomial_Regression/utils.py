@@ -1,4 +1,6 @@
 # -*- coding: UTF-8 -*-
+import os
+
 import matplotlib.pyplot as plt
 import numpy as np
 import abc
@@ -99,6 +101,9 @@ def draw_rmse_order_graph(training_times: int = 1000, train_method="analytic", t
                     w, train_rmse, test_rmse, iter_times, train_loss_list = pr.train(train_method, train_param,
                                                                                      draw_result=False)
                 elif train_method == "els gradient descent":
+                    w, train_rmse, test_rmse, iter_times, train_loss_list = pr.train(train_method, train_param,
+                                                                                     draw_result=False)
+                elif train_method == "conjugate gradient descent":
                     w, train_rmse, test_rmse, iter_times, train_loss_list = pr.train(train_method, train_param,
                                                                                      draw_result=False)
                 else:
@@ -442,9 +447,6 @@ def show_compare_method(m, train_methods, l2_norm_coefficient=0.0):
             plt.plot(draw_x, cgd_predict_y, color='yellow', linewidth=1.0, linestyle='-',
                      label="predict func(conjugate gradient descent)")
 
-        else:
-            raise NotImplementedError
-
         # 数据散点图
         plt.scatter(fixed_train_data[0], fixed_train_data[1], marker='o', color='green', s=10, label="train data")
         # sin(2*PI*x)的图象
@@ -500,6 +502,8 @@ class Gradient_Descent_Optimizer(Optimizer, ABC):
         if self.verbose:
             print("optimize with gradient descent.")
         train_loss = self.loss_func(self.train_param)
+        print("init param:", self.train_param, "init loss:", train_loss)
+        os.system("pause")
         train_loss_list = []
         latest_grad = None
         actual_iter_times = 0
@@ -513,16 +517,26 @@ class Gradient_Descent_Optimizer(Optimizer, ABC):
             if np.linalg.norm(latest_grad, 2) < self.epsilon:
                 if self.verbose:
                     print("gradient descent finished, actual iter times:", actual_iter_times)
+                    print("last lr:", self.lr)
                 break
             new_param = self.train_param - self.lr * latest_grad  # 梯度下降
             train_loss = self.loss_func(new_param)  # 计算本次迭代后的训练误差
             # 若loss不再下降，则不更新参数，并减小学习率
             if train_loss >= pre_loss:
-                self.lr *= 0.1  # 减小学习率
+                print("======go back======")
+                print("pre_loss, train loss:", pre_loss, train_loss)
+                print("iter num:", iter_num)
+                print("grad:", latest_grad)
+                self.lr *= 0.8  # 减小学习率
                 train_loss = pre_loss
+                print("======go back======")
+                os.system("pause")
             else:
                 # 否则更新参数
                 self.train_param = new_param
+                if self.lr < 2.0:
+                    # 可以尝试增大学习率，加速收敛
+                    self.lr *= 1.2
             # 若迭代次数达到上限，训练结束
             if actual_iter_times == self.max_iter_times:
                 if self.verbose:
@@ -692,7 +706,8 @@ if __name__ == '__main__':
     # draw_rmse_order_graph(1)
     # draw_rmse_order_graph()
     # draw_different_samples()
-    # draw_rmse_order_graph(1, train_method="els gradient descent", train_param=[50000, 1e-6])
+    # draw_rmse_order_graph(1, train_method="gradient descent", train_param=[0.5, 50000, 1e-6])
+    draw_rmse_order_graph(1, train_method="conjugate gradient descent", train_param=[100, 1e-6])
     # draw_rmse_l2_coefficient_graph()
     # find_best_l2_coefficient_graph()
     # show_compare_regular()
@@ -716,5 +731,5 @@ if __name__ == '__main__':
     #                         l2_norm_coefficient=np.exp(-9))
     # draw_iter_times_n_train_graph("stochastic gradient descent")
     # draw_iter_times_m_graph("stochastic gradient descent")
-    draw_iter_times_n_train_graph("els gradient descent")
-    draw_iter_times_m_graph("els gradient descent")
+    # draw_iter_times_n_train_graph("els gradient descent")
+    # draw_iter_times_m_graph("els gradient descent")
