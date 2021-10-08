@@ -1,9 +1,7 @@
 # -*- coding: UTF-8 -*-
 
-from sklearn import datasets
-from sklearn.model_selection import train_test_split
 
-from utils import *
+from Logistic_Regression.utils import *
 
 
 class Logistic_Regression_Class:
@@ -183,7 +181,7 @@ class Logistic_Regression_Class:
             loss = self._optimize_objective_func(w, self.X_train, self.y_train)
             return loss
 
-        gd_opt = Gradient_Descent_Optimizer(w, [max_iter_times, epsilon], loss_func, grad_func,
+        gd_opt = Gradient_Descent_Optimizer(w, [lr, max_iter_times, epsilon], loss_func, grad_func,
                                             self.verbose)  # 初始化Gradient_Descent_Optimizer
         w, actual_iter_times, train_loss_list, latest_grad = gd_opt.train()  # 使用梯度下降法求出w的解
 
@@ -226,110 +224,3 @@ class Logistic_Regression_Class:
             if self.verbose:
                 print("this method hasn't implemented!:")
             raise NotImplementedError
-
-
-if __name__ == '__main__':
-    # test find_best_lr()
-    # find_best_lr()
-    #
-    # os.system("pause")
-
-    # Test generate_data() and draw_data_generate()
-    # generate_data(n_samples=1000, n_features=10)
-    # n_train = 200
-    # n_test = 2000
-    # pos_mean_vector = np.array([1., 1.2])
-    # neg_mean_vector = np.array([-1., -1.2])
-    # pos_mean_vector = np.array([1.4, 2.1])
-    # neg_mean_vector = np.array([1.8, 1.5])
-    # hypothesis = False
-    # covariance_matrix = np.array([[0.6, 0.4], [0.4, 0.8]])
-    # X_train, y_train, train_pos_samples_num, train_neg_samples_num = generate_data(n_samples=n_train,
-    #                                                                                pos_mean_vector=pos_mean_vector,
-    #                                                                                neg_mean_vector=neg_mean_vector,
-    #                                                                                satisfy_naive_bayesian_hypothesis=hypothesis,
-    #                                                                                covariance_matrix=covariance_matrix)
-    # X_test, y_test, test_pos_samples_num, test_neg_samples_num = generate_data(n_samples=n_test,
-    #                                                                            pos_mean_vector=pos_mean_vector,
-    #                                                                            neg_mean_vector=neg_mean_vector,
-    #                                                                            satisfy_naive_bayesian_hypothesis=hypothesis,
-    #                                                                            covariance_matrix=covariance_matrix)
-    # draw_data_generate(X_train, train_pos_samples_num, train_neg_samples_num)
-    # draw_data_generate(X_test, test_pos_samples_num, test_neg_samples_num)
-
-    # logistic = Logistic_Regression_Class(n_feature=2, train_pos_samples_num=train_pos_samples_num,
-    #                                      test_pos_samples_num=test_pos_samples_num,
-    #                                      train_neg_samples_num=train_neg_samples_num,
-    #                                      test_neg_samples_num=test_neg_samples_num,
-    #                                      X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test,
-    #                                      regular_coef=0.0, verbose=True)
-    # w, train_acc, test_acc, actual_iter_times, train_loss_list = logistic.train(train_method="newton",
-    #                                                                             train_param=[50, 1e-5],
-    #                                                                             draw_result=True)
-    # train_y_pred = logistic.predict(w, X_train)
-    # test_y_pred = logistic.predict(w, X_test)
-    # analysis(y_train, train_y_pred, mode="Train")
-    # analysis(y_test, test_y_pred, mode="Test")
-
-    # 使用breast_cancer数据集进行二分类逻辑回归实验
-
-    breast_cancer_dataset = datasets.load_breast_cancer()
-    cancer_X = breast_cancer_dataset.data
-
-    # print("cancer_X info:")
-    # print(pd.DataFrame(cancer_X).info())
-    cancer_y = breast_cancer_dataset.target
-
-
-    # print("-------------------------------------------")
-    # print("cancer_y info:")
-    # print(pd.DataFrame(cancer_y).info())
-    # print("-------------------------------------------")
-
-    # 把所有正例放在反例前面
-    def sort_by_label(X, y):
-        assert len(X) == len(y)
-        X_pos, X_neg = [], []
-        y_pos, y_neg = [], []
-        pos_num, neg_num = 0, 0
-        for i in range(len(y)):
-            if y[i] == 1:
-                pos_num += 1
-                X_pos.append(X[i, :])
-                y_pos.append(1)
-            elif y[i] == 0:
-                neg_num += 1
-                X_neg.append(X[i, :])
-                y_neg.append(0)
-            else:
-                assert False
-        sorted_X = np.array(X_pos + X_neg)
-        sorted_y = np.array(y_pos + y_neg)
-        print("sorted_X.shape:", sorted_X.shape)
-        print("sorted_y.shape:", sorted_y.shape)
-        assert len(sorted_X) == len(sorted_y) == neg_num + pos_num == len(y)
-        return sorted_X, sorted_y, pos_num, neg_num
-
-
-    X_train, X_test, y_train, y_test = train_test_split(cancer_X, cancer_y, test_size=0.3)
-    X_train, y_train, train_pos_samples_num, train_neg_samples_num = sort_by_label(X_train, y_train)
-    X_test, y_test, test_pos_samples_num, test_neg_samples_num = sort_by_label(X_test, y_test)
-    n_train, n_feature = X_train.shape
-    n_test = len(X_test)
-    print("n_train:", n_train, "n_test:", n_test, "n_feature:", n_feature)
-
-    logistic = Logistic_Regression_Class(n_feature=n_feature, train_pos_samples_num=train_pos_samples_num,
-                                         test_pos_samples_num=test_pos_samples_num,
-                                         train_neg_samples_num=train_neg_samples_num,
-                                         test_neg_samples_num=test_neg_samples_num,
-                                         X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test,
-                                         regular_coef=0.15, verbose=True)
-
-    w, train_acc, test_acc, actual_iter_times, train_loss_list = logistic.train(train_method="newton",
-                                                                                train_param=[50, 1e-5],
-                                                                                draw_result=False)
-    train_y_pred = logistic.predict(w, X_train)
-    test_y_pred = logistic.predict(w, X_test)
-    analysis(y_train, train_y_pred, mode="Train")
-    analysis(y_test, test_y_pred, mode="Test")
-    print("finish")

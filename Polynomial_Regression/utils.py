@@ -90,7 +90,7 @@ def draw_rmse_order_graph(training_times: int = 1000, train_method="analytic", t
             mean_test_rmse = 0
             for _ in range(training_times):
                 pr = PR.Polynomial_Regression_Class(m=order, n_train=10, n_test=990, l2_norm_coefficient=0.,
-                                                    verbose=True)
+                                                    verbose=False)
                 w, train_rmse, test_rmse = None, None, None
                 if train_method == "analytic":
                     w, train_rmse, test_rmse = pr.train(train_method, train_param, draw_result=False)
@@ -502,8 +502,6 @@ class Gradient_Descent_Optimizer(Optimizer, ABC):
         if self.verbose:
             print("optimize with gradient descent.")
         train_loss = self.loss_func(self.train_param)
-        print("init param:", self.train_param, "init loss:", train_loss)
-        os.system("pause")
         train_loss_list = []
         latest_grad = None
         actual_iter_times = 0
@@ -523,14 +521,10 @@ class Gradient_Descent_Optimizer(Optimizer, ABC):
             train_loss = self.loss_func(new_param)  # 计算本次迭代后的训练误差
             # 若loss不再下降，则不更新参数，并减小学习率
             if train_loss >= pre_loss:
-                print("======go back======")
-                print("pre_loss, train loss:", pre_loss, train_loss)
                 print("iter num:", iter_num)
                 print("grad:", latest_grad)
                 self.lr *= 0.8  # 减小学习率
                 train_loss = pre_loss
-                print("======go back======")
-                os.system("pause")
             else:
                 # 否则更新参数
                 self.train_param = new_param
@@ -702,34 +696,54 @@ class Conjugate_Gradient_Optimizer(Optimizer, ABC):
 
 
 if __name__ == '__main__':
-    # draw_data_generate()
-    # draw_rmse_order_graph(1)
-    # draw_rmse_order_graph()
-    # draw_different_samples()
-    # draw_rmse_order_graph(1, train_method="gradient descent", train_param=[0.5, 50000, 1e-6])
-    draw_rmse_order_graph(1, train_method="conjugate gradient descent", train_param=[100, 1e-6])
-    # draw_rmse_l2_coefficient_graph()
-    # find_best_l2_coefficient_graph()
-    # show_compare_regular()
-    # find_best_lr()
-    # for m in [3, 5, 7, 9]:
-    #     show_compare_method(m=m, train_methods=["analytic", "gradient descent"])
-    #     show_compare_method(m=m, train_methods=["analytic", "gradient descent"], l2_norm_coefficient=np.exp(-9))
-    # draw_rmse_order_graph(1, train_method="stochastic gradient descent", train_param=[0.3, 50000, 1e-6])
-    # draw_rmse_order_graph(1, train_method="gradient descent", train_param=[0.1, 50000, 1e-6])
-    # draw_rmse_order_graph(10, "gradient descent", [0.1, 100000, 1e-6])
-    # draw_iter_times_n_train_graph("gradient descent")
-    # draw_iter_times_m_graph("gradient descent")
-    # draw_iter_times_n_train_graph("conjugate gradient descent")
-    # draw_iter_times_m_graph("conjugate gradient descent")
-    # for m in [3, 5, 7, 9]:
-    #     show_compare_method(m=m, train_methods=["analytic", "gradient descent", "conjugate gradient descent"])
-    #     show_compare_method(m=m, train_methods=["analytic", "gradient descent", "conjugate gradient descent"],
-    #                         l2_norm_coefficient=np.exp(-9))
-    #     show_compare_method(m=m, train_methods=["analytic", "gradient descent", "conjugate gradient descent",
-    #                                             "stochastic gradient descent", "els gradient descent", ],
-    #                         l2_norm_coefficient=np.exp(-9))
-    # draw_iter_times_n_train_graph("stochastic gradient descent")
-    # draw_iter_times_m_graph("stochastic gradient descent")
-    # draw_iter_times_n_train_graph("els gradient descent")
-    # draw_iter_times_m_graph("els gradient descent")
+    draw_data_generate()
+    os.system("pause")
+    draw_rmse_order_graph(1)
+    os.system("pause")
+    draw_rmse_order_graph()
+    os.system("pause")
+    draw_different_samples()
+    os.system("pause")
+    draw_rmse_order_graph(1, train_method="gradient descent", train_param=[0.5, 50000, 1e-6])
+    os.system("pause")
+    draw_rmse_l2_coefficient_graph()
+    os.system("pause")
+    find_best_l2_coefficient_graph()
+    os.system("pause")
+    show_compare_regular()
+    os.system("pause")
+    find_best_lr()
+    os.system("pause")
+    for m in [3, 5, 7, 9]:
+        show_compare_method(m=m, train_methods=["analytic", "gradient descent"])
+        show_compare_method(m=m, train_methods=["analytic", "gradient descent"], l2_norm_coefficient=np.exp(-9))
+    os.system("pause")
+    draw_rmse_order_graph(1, train_method="stochastic gradient descent", train_param=[0.3, 50000, 1e-6])
+    os.system("pause")
+    draw_rmse_order_graph(1, train_method="gradient descent", train_param=[0.1, 50000, 1e-6])
+    os.system("pause")
+    draw_rmse_order_graph(10, "gradient descent", [0.1, 100000, 1e-6])
+    os.system("pause")
+    draw_iter_times_n_train_graph("gradient descent")
+    os.system("pause")
+    draw_iter_times_m_graph("gradient descent")
+    os.system("pause")
+    draw_iter_times_n_train_graph("conjugate gradient descent")
+    os.system("pause")
+    draw_iter_times_m_graph("conjugate gradient descent")
+    os.system("pause")
+    for m in [3, 5, 7, 9]:
+        show_compare_method(m=m, train_methods=["analytic", "gradient descent", "conjugate gradient descent"])
+        show_compare_method(m=m, train_methods=["analytic", "gradient descent", "conjugate gradient descent"],
+                            l2_norm_coefficient=np.exp(-9))
+        show_compare_method(m=m, train_methods=["analytic", "gradient descent", "conjugate gradient descent",
+                                                "stochastic gradient descent", "els gradient descent", ],
+                            l2_norm_coefficient=np.exp(-9))
+    os.system("pause")
+    draw_iter_times_n_train_graph("stochastic gradient descent")
+    os.system("pause")
+    draw_iter_times_m_graph("stochastic gradient descent")
+    os.system("pause")
+    draw_iter_times_n_train_graph("els gradient descent")
+    os.system("pause")
+    draw_iter_times_m_graph("els gradient descent")

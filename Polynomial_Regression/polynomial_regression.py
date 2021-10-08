@@ -1,4 +1,5 @@
 # -*- coding: UTF-8 -*-
+import scipy.linalg as linalg
 from utils import *
 
 
@@ -35,7 +36,10 @@ class Polynomial_Regression_Class:
     def _mse_loss_with_l2_norm_regular(self, y_pred, y_true, w):
         assert len(y_pred) == len(y_true)
         mse_loss = (np.sum(np.square(y_pred - y_true))) / 2
-        l2_norm_regular = (self.l2_norm_coefficient / 2) * (np.matmul(w.transpose(), w))
+        if self.l2_norm_coefficient > 0.:
+            l2_norm_regular = (self.l2_norm_coefficient / 2) * (np.matmul(w.transpose(), w))
+        else:
+            l2_norm_regular = 0
         return mse_loss + l2_norm_regular
 
     # 均方根损失
@@ -49,7 +53,7 @@ class Polynomial_Regression_Class:
         X_t = X.transpose()
         X_t_mul_X = np.matmul(X_t, X)
         A = X_t_mul_X + self.l2_norm_coefficient * np.eye(self.m + 1)
-        A_pinv = np.linalg.pinv(A)
+        A_pinv = linalg.pinv(A)
         b = np.matmul(X_t, self.train_y_array)
 
         # 传入Analytic_Optimizer的解析法求解函数
