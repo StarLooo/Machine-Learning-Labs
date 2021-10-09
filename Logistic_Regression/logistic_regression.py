@@ -40,7 +40,6 @@ class Logistic_Regression_Class:
     def _sigmoid(self, vector_x):
         # 参考网上的经验，用这种方法解决溢出问题
         # 把大于0和小于0的元素分别处理
-        # 原来的sigmoid函数是 1/(1+np.exp(-Z))
         # 当vector_x是比较小的负数时会出现上溢，此时可以通过计算exp(vector_x) / (1+exp(vector_x)) 来解决
 
         mask = (vector_x > 0)
@@ -62,7 +61,7 @@ class Logistic_Regression_Class:
 
     # 预测
     def predict(self, w, X):
-        extend_X = np.concatenate((X, np.ones(shape=(len(X), 1))), axis=1)
+        extend_X = np.concatenate((np.ones(shape=(len(X), 1)), X), axis=1)
         y_pred = np.array([np.dot(w, extend_X[i, :]) for i in range(len(X))])
         return y_pred
 
@@ -77,7 +76,7 @@ class Logistic_Regression_Class:
     # 优化目标
     def _optimize_objective_func(self, w, X, y):
         assert len(X) == len(y)
-        extend_X = np.concatenate((X, np.ones(shape=(len(X), 1))), axis=1)
+        extend_X = np.concatenate((np.ones(shape=(len(X), 1)), X), axis=1)
         loss = 0
         for i in range(len(X)):
             inner_product = np.dot(w, extend_X[i, :])
@@ -97,26 +96,26 @@ class Logistic_Regression_Class:
         # 初始化w
         w = np.zeros(self.n_feature + 1)
 
-        # 牛顿迭代法求解w
+        # 牛顿法求解w
         # 传入Newton_Optimizer的一阶导函数
         def first_grad_func(w):
-            extend_X = np.concatenate((self.X_train, np.ones(shape=(self.n_train, 1))), axis=1)
+            extend_X = np.concatenate((np.ones(shape=(self.n_train, 1)), self.X_train,), axis=1)
             assert extend_X.shape == (self.n_train, self.n_feature + 1)
             first_grad = np.matmul(extend_X.T,
-                                   1 - self._sigmoid(-np.matmul(extend_X, w)) - self.y_train) + self.regular_coef * w
+                                   self._sigmoid(np.matmul(extend_X, w)) - self.y_train) + self.regular_coef * w
             assert first_grad.shape == (self.n_feature + 1,)
             return first_grad
 
         # 传入Newton_Optimizer的二阶导函数
         def second_grad_func(w):
-            extend_X = np.concatenate((self.X_train, np.ones(shape=(self.n_train, 1))), axis=1)
+            extend_X = np.concatenate((np.ones(shape=(self.n_train, 1)), self.X_train), axis=1)
             assert extend_X.shape == (self.n_train, self.n_feature + 1)
-            p0 = self._sigmoid(-np.matmul(extend_X, w))
-            p1 = 1 - p0
+            p1 = self._sigmoid(np.matmul(extend_X, w))
+            p0 = 1 - p1
             p = p0 * p1
             assert p.shape == p0.shape == p1.shape == (self.n_train,)
-            second_grad = np.matmul(extend_X.T, p.reshape(self.n_train, 1) * extend_X) + + self.regular_coef * np.eye(
-                self.n_feature + 1)
+            V = np.diag(p)
+            second_grad = np.matmul(np.matmul(extend_X.T, V), extend_X) + self.regular_coef * np.eye(self.n_feature + 1)
             assert second_grad.shape == (self.n_feature + 1, self.n_feature + 1)
             return second_grad
 
@@ -127,7 +126,7 @@ class Logistic_Regression_Class:
 
         newton_opt = Newton_Optimizer(w, [max_iter_times, epsilon], loss_func, first_grad_func, second_grad_func,
                                       self.verbose)  # 初始化Newton_Optimizer
-        w, actual_iter_times, train_loss_list, first_grad, second_grad = newton_opt.train()  # 使用牛顿迭代求出w的解
+        w, actual_iter_times, train_loss_list, first_grad, second_grad = newton_opt.train()  # 使用牛顿法求出w的解
 
         # 计算训练完成后训练集测试集上的accuracy
         train_acc = self._accuracy(w, self.X_train, self.y_train)
@@ -158,7 +157,7 @@ class Logistic_Regression_Class:
         # 梯度下降法求解w
         # 传入Gradient_Descent_Optimizer的梯度函数
         def grad_func(w):
-            extend_X = np.concatenate((self.X_train, np.ones(shape=(self.n_train, 1))), axis=1)
+            extend_X = np.concatenate((np.ones(shape=(self.n_train, 1)), self.X_train), axis=1)
             assert extend_X.shape == (self.n_train, self.n_feature + 1)
             # 以下累加式可以向量化，向量化后numpy可以大大提高计算效率
             # grad = np.zeros(self.n_feature + 1)
@@ -171,8 +170,7 @@ class Logistic_Regression_Class:
             #     else:
             #         grad -= extend_X[i, :] * (self.y_train[i] - 1 + 1 / (1 + np.exp(inner_product)))
             # grad += self.regular_coef * w
-            grad = np.matmul(extend_X.T,
-                             1 - self._sigmoid(-np.matmul(extend_X, w)) - self.y_train) + self.regular_coef * w
+            grad = np.matmul(extend_X.T, self._sigmoid(np.matmul(extend_X, w)) - self.y_train) + self.regular_coef * w
             assert grad.shape == (self.n_feature + 1,)
             return grad
 
@@ -190,7 +188,7 @@ class Logistic_Regression_Class:
         test_acc = self._accuracy(w, self.X_test, self.y_test)
 
         if self.verbose:
-            print("L1-norm of latest gradient:", np.max(latest_grad))
+            print("L1-norm of latest gradient:", np.max(np.abs(latest_grad)))
             print("w:", w)
             print("train_acc:", round(train_acc, 4), "test_acc:", round(test_acc, 4))
             print("actual iter times:", actual_iter_times)

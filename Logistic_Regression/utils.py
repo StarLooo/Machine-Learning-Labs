@@ -81,6 +81,7 @@ def draw_data_generate(X, pos_samples_num, neg_samples_num):
         plt.legend(loc="best")
         plt.xlabel("d_1")
         plt.ylabel("d_2")
+        plt.savefig(fname="draw_data_generate.svg", dpi=10000, format="svg")
         plt.show()
 
 
@@ -88,8 +89,8 @@ def draw_data_generate(X, pos_samples_num, neg_samples_num):
 def draw_predict_analysis(X_train, train_pos_samples_num, X_test, test_pos_samples_num, w, title):
     left = min(np.min(X_train[:, 0]), np.min(X_test[:, 0]))
     right = max(np.max(X_train[:, 0]), np.max(X_test[:, 0]))
-    draw_x = np.linspace(left, right, 200)
-    draw_y = np.array([-(w[2] + w[0] * x) / w[1] for x in draw_x])
+    draw_x = np.linspace((3 * left + right) / 4, (3 * right + left) / 4, 200)
+    draw_y = np.array([-(w[0] + w[1] * x) / w[2] for x in draw_x])
 
     # 训练集中样本散点图
     plt.scatter(X_train[:train_pos_samples_num, 0], X_train[:train_pos_samples_num, 1], marker='.', color='red', s=20,
@@ -160,10 +161,20 @@ class Gradient_Descent_Optimizer(Optimizer, ABC):
             if np.linalg.norm(latest_grad, 2) < self.epsilon:
                 if self.verbose:
                     print("gradient descent finished, actual iter times:", actual_iter_times)
+                    print("last lr:", self.lr)
                 break
             new_param = self.train_param - self.lr * latest_grad  # 梯度下降
             train_loss = self.loss_func(new_param)  # 计算本次迭代后的训练误差
-            self.train_param = new_param
+            # 若loss不再下降，则不更新参数，并减小学习率
+            if train_loss >= pre_loss:
+                self.lr *= 0.8  # 减小学习率
+                train_loss = pre_loss
+            else:
+                # 否则更新参数
+                self.train_param = new_param
+                if self.lr < 2.0:
+                    # 可以尝试增大学习率，加速收敛
+                    self.lr *= 1.2
             # 若迭代次数达到上限，训练结束
             if actual_iter_times == self.max_iter_times:
                 if self.verbose:
@@ -312,12 +323,12 @@ if __name__ == '__main__':
     generate_data(n_samples=1000, n_features=10)
     n_train = 200
     n_test = 2000
-    pos_mean_vector = np.array([1., 1.2])
-    neg_mean_vector = np.array([-1., -1.2])
-    # pos_mean_vector = np.array([1.4, 2.1])
-    # neg_mean_vector = np.array([1.8, 1.5])
-    hypothesis = False
-    covariance_matrix = np.array([[0.6, 0.4], [0.4, 0.8]])
+    # pos_mean_vector = np.array([1., 1.2])
+    # neg_mean_vector = np.array([-1., -1.2])
+    pos_mean_vector = np.array([1.0, 1.6])
+    neg_mean_vector = np.array([-0.5, 0.0])
+    hypothesis = True
+    covariance_matrix = np.array([[0.4, 0.0], [0.0, 0.6]])
     X_train, y_train, train_pos_samples_num, train_neg_samples_num = generate_data(n_samples=n_train,
                                                                                    pos_mean_vector=pos_mean_vector,
                                                                                    neg_mean_vector=neg_mean_vector,
@@ -332,18 +343,28 @@ if __name__ == '__main__':
     # draw_data_generate(X_test, test_pos_samples_num, test_neg_samples_num)
 
     logistic = LG.Logistic_Regression_Class(n_feature=2, train_pos_samples_num=train_pos_samples_num,
-                                         test_pos_samples_num=test_pos_samples_num,
-                                         train_neg_samples_num=train_neg_samples_num,
-                                         test_neg_samples_num=test_neg_samples_num,
-                                         X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test,
-                                         regular_coef=0.0, verbose=True)
-    w, train_acc, test_acc, actual_iter_times, train_loss_list = logistic.train(train_method="newton",
-                                                                                train_param=[50, 1e-5],
-                                                                                draw_result=True)
-    train_y_pred = logistic.predict(w, X_train)
-    test_y_pred = logistic.predict(w, X_test)
-    analysis(y_train, train_y_pred, mode="Train")
-    analysis(y_test, test_y_pred, mode="Test")
+                                            test_pos_samples_num=test_pos_samples_num,
+                                            train_neg_samples_num=train_neg_samples_num,
+                                            test_neg_samples_num=test_neg_samples_num,
+                                            X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test,
+                                            regular_coef=0.0, verbose=True)
+    w_nt, train_acc_nt, test_acc_nt, actual_iter_times_nt, train_loss_list_nt = logistic.train(train_method="newton",
+                                                                                               train_param=[50, 1e-6],
+                                                                                               draw_result=True)
+    w_gd, train_acc_gd, test_acc_gd, actual_iter_times_gd, train_loss_list_gd = logistic.train(
+        train_method="gradient descent",
+        train_param=[1, 20000, 1e-6],
+        draw_result=True)
+
+    train_y_pred_nt = logistic.predict(w_nt, X_train)
+    test_y_pred_nt = logistic.predict(w_nt, X_test)
+    analysis(y_train, train_y_pred_nt, mode="Train")
+    analysis(y_test, test_y_pred_nt, mode="Test")
+
+    train_y_pred_gd = logistic.predict(w_gd, X_train)
+    test_y_pred_gd = logistic.predict(w_gd, X_test)
+    analysis(y_train, train_y_pred_gd, mode="Train")
+    analysis(y_test, test_y_pred_gd, mode="Test")
     # ===========================================================================================
     # 使用breast_cancer数据集进行二分类逻辑回归实验
 
