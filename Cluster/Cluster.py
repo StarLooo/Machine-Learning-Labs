@@ -35,18 +35,40 @@ class Cluster(metaclass=abc.ABCMeta):
             raise NotImplementedError
 
     # 距离度量，计算point_matrix_A中各point到point_matrix_A中各point之间的距离的平方
-    def _distances(self, point_matrix_A,point_matrix_B, metric="Euclid"):
-        assert point_matrix.shape[1] == self.n_features
+    def _distances(self, point_matrix_A, point_matrix_B, metric="Euclid"):
+        assert point_matrix_A.shape[1] == point_matrix_B.shape[1] == self.n_features
+        n_A = point_matrix_A.shape[0]
+        n_B = point_matrix_B.shape[0]
         if metric == "Euclid":
-            return np.matmul(point_matrix, point_matrix.T)
+            A_mul_A_T = np.diag(np.matmul(point_matrix_A, point_matrix_A.T))
+            A_mul_A_T_repeat = A_mul_A_T.reshape(n_A, 1).repeat(repeats=n_B, axis=1)
+            B_mul_B_T = np.diag(np.matmul(point_matrix_B, point_matrix_B.T))
+            B_mul_B_T_repeat = B_mul_B_T.reshape(1, n_B).repeat(repeats=n_A, axis=0)
+            cross_matrix = np.matmul(point_matrix_A, point_matrix_B.T)
+            assert A_mul_A_T_repeat.shape == B_mul_B_T_repeat.shape == cross_matrix.shape == (n_A, n_B)
+            return A_mul_A_T_repeat - 2 * cross_matrix + B_mul_B_T_repeat
         else:
             raise NotImplementedError
 
     # 计算轮廓系数
-    def compute_silhouette_coefficient(self, samples, means_vectors, clusters):
-        assert samples.shape == (self.n_samples, self.n_features)
-        assert means_vectors.shape == (self.k, self.n_features)
+    def compute_silhouette_coefficient(self, clusters):
         assert clusters.shape == (self.n_samples,)
+        samples_distances_matrix = self._distances(self.train_samples_matrix, self.train_samples_matrix)
+        total_sc = 0
+        for cluster_index in range(self.k):
+            mask = (clusters == cluster_index)
+            samples_distances_matrix_in_this_cluster = samples_distances_matrix[mask, :][:, mask]
+            num_in_this_cluster = samples_distances_matrix_in_this_cluster.shape[1]
+            assert num_in_this_cluster > 1
+            a = np.sum(samples_distances_matrix_in_this_cluster, axis=1) / num_in_this_cluster - 1
+            samples_distances_matrix_to_other_clusters = samples_distances_matrix[mask, :][:, ~mask]
+            num_not_in_this_cluster = samples_distances_matrix_to_other_clusters.shape[1]
+            b = np.sum(samples_distances_matrix_to_other_clusters, axis=1) / num_not_in_this_cluster
+            assert a.shape == b.shape == (num_in_this_cluster,)
+            total_sc += np.sum((b - a) / np.maximum(a, b))
+        mean_sc = total_sc / self.n_samples
+        assert -1.0 <= mean_sc <= 1.0
+        return mean_sc
 
     @abc.abstractmethod
     def cluster(self, draw_result=False):
@@ -116,21 +138,22 @@ class K_Means(Cluster, ABC):
         for iter_time in range(1, self.max_iters + 1):
             actual_iter_times = iter_time
             # 这里用向量化计算距离矩阵而不是循环，可以提高效率
-            samples_inner_product = np.diag(np.matmul(self.train_samples_matrix, self.train_samples_matrix.T))
-            assert samples_inner_product.shape == (self.n_samples,)
-
-            means_inner_product = np.diag(np.matmul(means_vectors, means_vectors.T))
-            assert means_inner_product.shape == (self.k,)
-
-            samples_dist_matrix = samples_inner_product.reshape(self.n_samples, 1).repeat(repeats=self.k, axis=1)
-            assert samples_dist_matrix.shape == (self.n_samples, self.k)
-
-            means_dist_matrix = means_inner_product.reshape(1, self.k).repeat(repeats=self.n_samples, axis=0)
-            assert means_dist_matrix.shape == (self.n_samples, self.k)
-
-            cross_matrix = np.matmul(self.train_samples_matrix, means_vectors.T)
-            assert cross_matrix.shape == (self.n_samples, self.k)
-            dist_matrix = samples_dist_matrix - 2 * cross_matrix + means_dist_matrix
+            # samples_inner_product = np.diag(np.matmul(self.train_samples_matrix, self.train_samples_matrix.T))
+            # assert samples_inner_product.shape == (self.n_samples,)
+            #
+            # means_inner_product = np.diag(np.matmul(means_vectors, means_vectors.T))
+            # assert means_inner_product.shape == (self.k,)
+            #
+            # samples_dist_matrix = samples_inner_product.reshape(self.n_samples, 1).repeat(repeats=self.k, axis=1)
+            # assert samples_dist_matrix.shape == (self.n_samples, self.k)
+            #
+            # means_dist_matrix = means_inner_product.reshape(1, self.k).repeat(repeats=self.n_samples, axis=0)
+            # assert means_dist_matrix.shape == (self.n_samples, self.k)
+            #
+            # cross_matrix = np.matmul(self.train_samples_matrix, means_vectors.T)
+            # assert cross_matrix.shape == (self.n_samples, self.k)
+            # dist_matrix = samples_dist_matrix - 2 * cross_matrix + means_dist_matrix
+            dist_matrix = self._distances(self.train_samples_matrix, means_vectors)
             pred_clusters = np.argmin(dist_matrix, axis=1)
             for cluster_index in range(self.k):
                 mask = (pred_clusters == cluster_index)
@@ -202,10 +225,12 @@ if __name__ == '__main__':
     verbose = True
 
     k_means = K_Means(k, n_features, params, train_samples_matrix, clustered_samples_list, "random", verbose)
-    pred_clusters, mean_square_loss, means_vectors, actual_iter_times = k_means.cluster(draw_result=True)
+    pred_clusters, _, _, _ = k_means.cluster(draw_result=False)
+    print("silhouette_coefficient:", k_means.compute_silhouette_coefficient(pred_clusters))
 
     k_means = K_Means(k, n_features, params, train_samples_matrix, clustered_samples_list, "heuristic", verbose)
-    pred_clusters, mean_square_loss, means_vectors, actual_iter_times = k_means.cluster(draw_result=True)
+    pred_clusters, _, _, _ = k_means.cluster(draw_result=False)
+    print("silhouette_coefficient:", k_means.compute_silhouette_coefficient(pred_clusters))
 
 # 向量化的sigmoid函数
 # def _sigmoid(self, vector_x):
