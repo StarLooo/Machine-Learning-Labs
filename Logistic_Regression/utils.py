@@ -1,12 +1,16 @@
 # -*- coding: UTF-8 -*-
 import abc
+import os
 from abc import ABC
 
-import pandas as pd
-from sklearn.metrics import roc_curve, auc, confusion_matrix
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import seaborn
+from sklearn import datasets
+from sklearn.metrics import roc_curve, auc, confusion_matrix
+from sklearn.model_selection import train_test_split
+
 from Logistic_Regression import logistic_regression as LG
 
 plt.rcParams['font.sans-serif'] = ['SimHei']  # 替换sans-serif字体，解决中文显示问题
@@ -100,11 +104,13 @@ def draw_predict_analysis(X_train, train_pos_samples_num, X_test, test_pos_sampl
     # 训练得到的划分直线
     plt.plot(draw_x, draw_y, color='black', linewidth=1.0, linestyle='--',
              label="divide line")
-    plt.title(title + "(pos train samples_num=" + str(train_pos_samples_num) + ",neg train samples_num=" + str(
-        len(X_train) - train_pos_samples_num) + ")")
+    title_1 = title + "(pos train samples_num=" + str(train_pos_samples_num) + ",neg train samples_num=" + str(
+        len(X_train) - train_pos_samples_num) + ")"
+    plt.title(title_1)
     plt.legend(loc='best')
     plt.xlabel("d_1")
     plt.ylabel("d_2")
+    plt.savefig(fname=title_1 + ".svg", dpi=2000, format="svg")
     plt.show()
 
     # 测试集中样本散点图
@@ -115,11 +121,13 @@ def draw_predict_analysis(X_train, train_pos_samples_num, X_test, test_pos_sampl
     # 训练得到的划分直线
     plt.plot(draw_x, draw_y, color='black', linewidth=1.0, linestyle='--',
              label="divide line")
-    plt.title(title + "(pos test samples_num=" + str(test_pos_samples_num) + ",neg test samples_num=" + str(
-        len(X_test) - test_pos_samples_num) + ")")
+    title_2 = title + "(pos test samples_num=" + str(test_pos_samples_num) + ",neg test samples_num=" + str(
+        len(X_test) - test_pos_samples_num) + ")"
+    plt.title(title_2)
     plt.legend(loc='best')
     plt.xlabel("d_1")
     plt.ylabel("d_2")
+    plt.savefig(fname=title_2 + ".svg", dpi=2000, format="svg")
     plt.show()
 
 
@@ -232,13 +240,13 @@ def find_best_lr(train_method="gradient descent"):
     lr_range = [0.1, 0.3, 0.5, 0.7, 0.9, 1.1]
     # 第二次搜索
     # lr_range = [0.90, 0.95, 1.0, 1.05, 1.1, 1.15]
-    max_iters = 5000
+    max_iters = 20000
     n_train = 200
-    n_test = 1000
-    pos_mean_vector = np.array([1.4, 2.1])
-    neg_mean_vector = np.array([-0.8, -1.5])
+    n_test = 2000
+    pos_mean_vector = np.array([1.0, 1.6])
+    neg_mean_vector = np.array([-0.5, 0.0])
     hypothesis = True
-    covariance_matrix = np.array([[0.6, 0.0], [0.0, 0.7]])
+    covariance_matrix = np.array([[0.4, 0.0], [0.0, 0.6]])
     X_train, y_train, train_pos_samples_num, train_neg_samples_num = generate_data(n_samples=n_train,
                                                                                    pos_mean_vector=pos_mean_vector,
                                                                                    neg_mean_vector=neg_mean_vector,
@@ -253,7 +261,7 @@ def find_best_lr(train_method="gradient descent"):
     for i in range(len(lr_range)):
         lr = lr_range[i]
         draw_color = draw_color_list[i]
-        epsilon = 1e-3
+        epsilon = 1e-6
         logistic = LG.Logistic_Regression_Class(n_feature=2, train_pos_samples_num=train_pos_samples_num,
                                                 test_pos_samples_num=test_pos_samples_num,
                                                 train_neg_samples_num=train_neg_samples_num,
@@ -273,8 +281,6 @@ def find_best_lr(train_method="gradient descent"):
         plt.plot(range(5, iter_times + 1), np.array(train_loss_list)[5:], color=draw_color, linewidth=1.0,
                  linestyle='-', label="lr=" + str(lr))
     plt.xlabel("iter_times")
-    plt.xlim(left=5, right=2000)
-    plt.ylim(bottom=0., top=0.5)
     plt.ylabel("train_loss")
     plt.legend(loc="best")
     plt.title("loss-iter graph(" + train_method + ")")
@@ -297,9 +303,12 @@ def analysis(y_true, y_pred, mode):
         plt.ylim([-0.05, 1.05])
         plt.xlabel('False Positive Rate')
         plt.ylabel('True Positive Rate')
-        plt.title(mode + ' ROC Curve')
+        title = mode + " ROC Curve"
+        plt.title(title)
         plt.legend(loc="best")
+        plt.savefig(fname=title + ".svg", dpi=2000, format="svg")
         plt.show()
+
         # 绘制混淆矩阵
         bool_2_string = np.array(["neg", "pos"])
         predict_label = bool_2_string[(y_pred > 0).astype(np.int32)]
@@ -309,25 +318,282 @@ def analysis(y_true, y_pred, mode):
         seaborn.heatmap(df, annot=True, fmt="d", cmap="YlGnBu")
         plt.ylabel('True label')
         plt.xlabel('Predicted label')
-        plt.title(mode + " Confusion Matrix Graph")
+        title = mode + " Confusion Matrix Graph"
+        plt.title(title)
+        plt.savefig(fname=title + ".svg", dpi=2000, format="svg")
+        plt.show()
+
+
+# 对比分析满足和不满足朴素贝叶斯假设下的分类精度
+def hypothesis_test(n_iters=10):
+    n_train = 200
+    n_test = 2000
+    pos_mean_vector = np.array([1.0, 1.6])
+    neg_mean_vector = np.array([-0.5, 0.0])
+    covariance_matrix_independence = np.array([[0.4, 0.0], [0.0, 0.6]])
+    covariance_matrix_not_independence = np.array([[0.4, 0.1], [0.1, 0.6]])
+    # satisfy conditional independence case:
+    test_acc_independence = 0
+    for i in range(n_iters):
+        X_train, y_train, train_pos_samples_num, \
+        train_neg_samples_num = generate_data(n_samples=n_train,
+                                              pos_mean_vector=pos_mean_vector,
+                                              neg_mean_vector=neg_mean_vector,
+                                              satisfy_naive_bayesian_hypothesis=True,
+                                              covariance_matrix=covariance_matrix_independence)
+        X_test, y_test, test_pos_samples_num, \
+        test_neg_samples_num = generate_data(n_samples=n_test,
+                                             pos_mean_vector=pos_mean_vector,
+                                             neg_mean_vector=neg_mean_vector,
+                                             satisfy_naive_bayesian_hypothesis=True,
+                                             covariance_matrix=covariance_matrix_independence)
+        logistic = LG.Logistic_Regression_Class(n_feature=2, train_pos_samples_num=train_pos_samples_num,
+                                                test_pos_samples_num=test_pos_samples_num,
+                                                train_neg_samples_num=train_neg_samples_num,
+                                                test_neg_samples_num=test_neg_samples_num,
+                                                X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test,
+                                                regular_coef=0.0, verbose=False)
+        w, train_acc, test_acc, actual_iter_times, train_loss_list = logistic.train(train_method="gradient descent",
+                                                                                    train_param=[1, 20000, 1e-6],
+                                                                                    draw_result=False)
+        test_acc_independence += test_acc
+    test_acc_independence /= n_iters
+
+    # not satisfy conditional independence case:
+    test_acc_not_independence = 0
+    for i in range(n_iters):
+        X_train, y_train, train_pos_samples_num, \
+        train_neg_samples_num = generate_data(n_samples=n_train,
+                                              pos_mean_vector=pos_mean_vector,
+                                              neg_mean_vector=neg_mean_vector,
+                                              satisfy_naive_bayesian_hypothesis=False,
+                                              covariance_matrix=covariance_matrix_not_independence)
+        X_test, y_test, test_pos_samples_num, \
+        test_neg_samples_num = generate_data(n_samples=n_test,
+                                             pos_mean_vector=pos_mean_vector,
+                                             neg_mean_vector=neg_mean_vector,
+                                             satisfy_naive_bayesian_hypothesis=False,
+                                             covariance_matrix=covariance_matrix_not_independence)
+        logistic = LG.Logistic_Regression_Class(n_feature=2, train_pos_samples_num=train_pos_samples_num,
+                                                test_pos_samples_num=test_pos_samples_num,
+                                                train_neg_samples_num=train_neg_samples_num,
+                                                test_neg_samples_num=test_neg_samples_num,
+                                                X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test,
+                                                regular_coef=0.0, verbose=False)
+        w, train_acc, test_acc, actual_iter_times, train_loss_list = logistic.train(train_method="gradient descent",
+                                                                                    train_param=[1, 20000, 1e-6],
+                                                                                    draw_result=False)
+        test_acc_not_independence += test_acc
+    test_acc_not_independence /= n_iters
+
+    print("iter " + str(n_iters) + " times finished!")
+    print("test_acc when satisfy conditional independence:", round(test_acc_independence, 4))
+    print("test_acc when not satisfy conditional independence:", round(test_acc_not_independence, 4))
+
+
+# 绘制accuracy随l2_coefficient的变化图
+def draw_accuracy_regular_coef_graph(training_times: int = 10, train_method="newton", train_param=None):
+    assert training_times > 0
+    if is_show:
+        mean_train_acc_list = []
+        mean_test_acc_list = []
+        regular_coef_range = np.arange(0.01, 0.51, 0.01)
+        n_train = 20
+        n_test = 2000
+        pos_mean_vector = np.array([1.0, 1.6])
+        neg_mean_vector = np.array([-0.5, 0.0])
+        covariance_matrix = np.array([[0.4, 0.0], [0.0, 0.6]])
+
+        for regular_coef in regular_coef_range:
+            mean_train_acc = 0
+            mean_test_acc = 0
+            for _ in range(training_times):
+                X_train, y_train, train_pos_samples_num, \
+                train_neg_samples_num = generate_data(n_samples=n_train,
+                                                      pos_mean_vector=pos_mean_vector,
+                                                      neg_mean_vector=neg_mean_vector,
+                                                      satisfy_naive_bayesian_hypothesis=True,
+                                                      covariance_matrix=covariance_matrix)
+                X_test, y_test, test_pos_samples_num, \
+                test_neg_samples_num = generate_data(n_samples=n_test,
+                                                     pos_mean_vector=pos_mean_vector,
+                                                     neg_mean_vector=neg_mean_vector,
+                                                     satisfy_naive_bayesian_hypothesis=True,
+                                                     covariance_matrix=covariance_matrix)
+
+                logistic = LG.Logistic_Regression_Class(n_feature=2, train_pos_samples_num=train_pos_samples_num,
+                                                        test_pos_samples_num=test_pos_samples_num,
+                                                        train_neg_samples_num=train_neg_samples_num,
+                                                        test_neg_samples_num=test_neg_samples_num,
+                                                        X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test,
+                                                        regular_coef=regular_coef, verbose=False)
+                w, train_acc, test_acc, actual_iter_times, train_loss_list = None, None, None, None, None
+                if train_method == "gradient descent":
+                    w, train_acc, test_acc, actual_iter_times, train_loss_list = logistic.train(
+                        train_method="gradient descent", train_param=[1, 20000, 1e-6], draw_result=False)
+                elif train_method == "newton":
+                    w, train_acc, test_acc, actual_iter_times, train_loss_list = logistic.train(
+                        train_method="newton", train_param=[50, 1e-6], draw_result=False)
+                else:
+                    raise NotImplementedError
+                mean_train_acc += train_acc
+                mean_test_acc += test_acc
+            mean_train_acc_list.append(mean_train_acc / training_times)
+            mean_test_acc_list.append(mean_test_acc / training_times)
+        draw_x = regular_coef_range
+        plt.scatter(draw_x, np.array(mean_train_acc_list), marker='o', color='blue', s=10)
+        plt.scatter(draw_x, np.array(mean_test_acc_list), marker='o', color='red', s=10)
+        plt.plot(draw_x, np.array(mean_train_acc_list), color='blue', linewidth=1.0, linestyle='--',
+                 label="train acc")
+        plt.plot(draw_x, np.array(mean_test_acc_list), color='red', linewidth=1.0, linestyle='-',
+                 label="test acc")
+        plt.xlabel("regular_coef")
+        plt.ylabel("acc")
+        plt.legend(loc="best")
+        plt.title("acc_regular_coef graph(" + train_method + ")")
+        plt.savefig(fname="acc_regular_coef.svg", dpi=2000, format="svg")
+        plt.show()
+
+
+# 对比加正则项后与加正则项前的拟合效果
+def show_compare_regular():
+    if is_show:
+        n_train = 20
+        n_test = 2000
+        pos_mean_vector = np.array([1.0, 1.6])
+        neg_mean_vector = np.array([-0.5, 0.0])
+        hypothesis = True
+        covariance_matrix = np.array([[0.4, 0.0], [0.0, 0.6]])
+        X_train, y_train, train_pos_samples_num, train_neg_samples_num = generate_data(n_samples=n_train,
+                                                                                       pos_mean_vector=pos_mean_vector,
+                                                                                       neg_mean_vector=neg_mean_vector,
+                                                                                       satisfy_naive_bayesian_hypothesis=hypothesis,
+                                                                                       covariance_matrix=covariance_matrix)
+        X_test, y_test, test_pos_samples_num, test_neg_samples_num = generate_data(n_samples=n_test,
+                                                                                   pos_mean_vector=pos_mean_vector,
+                                                                                   neg_mean_vector=neg_mean_vector,
+                                                                                   satisfy_naive_bayesian_hypothesis=hypothesis,
+                                                                                   covariance_matrix=covariance_matrix)
+        # no regular
+        regular_coef = 0.0
+        logistic = LG.Logistic_Regression_Class(n_feature=2, train_pos_samples_num=train_pos_samples_num,
+                                                test_pos_samples_num=test_pos_samples_num,
+                                                train_neg_samples_num=train_neg_samples_num,
+                                                test_neg_samples_num=test_neg_samples_num,
+                                                X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test,
+                                                regular_coef=regular_coef, verbose=True)
+        w_no_regular, train_acc_no_regular, test_acc_no_regular, actual_iter_times_no_regular, \
+        train_loss_list_no_regular = logistic.train(
+            train_method="gradient descent",
+            train_param=[1, 20000, 1e-6],
+            draw_result=True)
+        train_y_pred_no_regular = logistic.predict(w_no_regular, X_train)
+        test_y_pred_no_regular = logistic.predict(w_no_regular, X_test)
+        analysis(y_train, train_y_pred_no_regular, mode="Gradient Descent,Train")
+        analysis(y_test, test_y_pred_no_regular, mode="Gradient Descent,Test")
+
+        # regular
+        regular_coef = 0.2
+        logistic = LG.Logistic_Regression_Class(n_feature=2, train_pos_samples_num=train_pos_samples_num,
+                                                test_pos_samples_num=test_pos_samples_num,
+                                                train_neg_samples_num=train_neg_samples_num,
+                                                test_neg_samples_num=test_neg_samples_num,
+                                                X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test,
+                                                regular_coef=regular_coef, verbose=True)
+        w_regular, train_acc_regular, test_acc_regular, actual_iter_times_regular, \
+        train_loss_list_regular = logistic.train(
+            train_method="gradient descent",
+            train_param=[1, 20000, 1e-6],
+            draw_result=True)
+        train_y_pred_regular = logistic.predict(w_regular, X_train)
+        test_y_pred_regular = logistic.predict(w_regular, X_test)
+        analysis(y_train, train_y_pred_regular, mode="Gradient Descent,Train")
+        analysis(y_test, test_y_pred_regular, mode="Gradient Descent,Test")
+
+
+# 对比不同方法的迭代次数
+def show_compare_method_iter_times():
+    if is_show:
+        n_train_list = [20, 50, 100, 200, 300, 400, 500, 750, 1000]
+        n_test = 2000
+        pos_mean_vector = np.array([1.0, 1.6])
+        neg_mean_vector = np.array([-0.5, 0.0])
+        hypothesis = False
+        # hypothesis = True
+        covariance_matrix = np.array([[0.4, 0.1], [0.1, 0.6]])
+        # covariance_matrix = np.array([[0.4, 0.0], [0.0, 0.6]])
+        gd_actual_iter_times_list = []
+        newton_actual_iter_times_list = []
+        for n_train in n_train_list:
+            X_train, y_train, train_pos_samples_num, train_neg_samples_num = generate_data(n_samples=n_train,
+                                                                                           pos_mean_vector=pos_mean_vector,
+                                                                                           neg_mean_vector=neg_mean_vector,
+                                                                                           satisfy_naive_bayesian_hypothesis=hypothesis,
+                                                                                           covariance_matrix=covariance_matrix)
+            X_test, y_test, test_pos_samples_num, test_neg_samples_num = generate_data(n_samples=n_test,
+                                                                                       pos_mean_vector=pos_mean_vector,
+                                                                                       neg_mean_vector=neg_mean_vector,
+                                                                                       satisfy_naive_bayesian_hypothesis=hypothesis,
+                                                                                       covariance_matrix=covariance_matrix)
+            regular_coef = 0.5
+            # regular_coef = 0.0
+            logistic = LG.Logistic_Regression_Class(n_feature=2, train_pos_samples_num=train_pos_samples_num,
+                                                    test_pos_samples_num=test_pos_samples_num,
+                                                    train_neg_samples_num=train_neg_samples_num,
+                                                    test_neg_samples_num=test_neg_samples_num,
+                                                    X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test,
+                                                    regular_coef=regular_coef, verbose=True)
+            w_gd, train_acc_gd, test_acc_gd, actual_iter_times_gd, train_loss_list_gd = logistic.train(
+                train_method="gradient descent",
+                train_param=[1, 20000, 1e-6],
+                draw_result=False)
+            gd_actual_iter_times_list.append(actual_iter_times_gd)
+
+            w_newton, train_acc_newton, test_acc_newton, actual_iter_times_newton, train_loss_list_newton = logistic.train(
+                train_method="newton",
+                train_param=[50, 1e-6],
+                draw_result=False)
+            newton_actual_iter_times_list.append(actual_iter_times_newton)
+
+        draw_x = np.log10(np.array(n_train_list))
+        plt.scatter(draw_x, np.array(gd_actual_iter_times_list), marker='o', color='blue', s=10)
+        plt.scatter(draw_x, np.array(newton_actual_iter_times_list), marker='o', color='red', s=10)
+        plt.plot(draw_x, np.array(gd_actual_iter_times_list), color='blue', linewidth=1.0, linestyle='--',
+                 label="gradient descent")
+        plt.plot(draw_x, np.array(newton_actual_iter_times_list), color='red', linewidth=1.0, linestyle='-',
+                 label="newton")
+        plt.xlabel("log10(n_train)")
+        plt.ylabel("iter times")
+        plt.legend(loc="best")
+        plt.title("iter_times_log_n_train_graph")
+        plt.savefig(fname="iter_times_log_n_train_graph.svg", dpi=2000, format="svg")
         plt.show()
 
 
 if __name__ == '__main__':
-    # test find_best_lr()
     # find_best_lr()
-
     # os.system("pause")
 
-    # Test generate_data() and draw_data_generate()
-    generate_data(n_samples=1000, n_features=10)
+    # hypothesis_test(100)
+    # os.system("pause")
+
+    # draw_accuracy_regular_coef_graph()
+    # os.system("pause")
+
+    # show_compare_regular()
+    # os.system("pause")
+
+    # show_compare_method_iter_times()
+    # os.system("pause")
+
     n_train = 200
+    # n_train = 200
     n_test = 2000
-    # pos_mean_vector = np.array([1., 1.2])
-    # neg_mean_vector = np.array([-1., -1.2])
     pos_mean_vector = np.array([1.0, 1.6])
     neg_mean_vector = np.array([-0.5, 0.0])
+    # hypothesis = False
     hypothesis = True
+    # covariance_matrix = np.array([[0.4, 0.1], [0.1, 0.6]])
     covariance_matrix = np.array([[0.4, 0.0], [0.0, 0.6]])
     X_train, y_train, train_pos_samples_num, train_neg_samples_num = generate_data(n_samples=n_train,
                                                                                    pos_mean_vector=pos_mean_vector,
@@ -342,12 +608,13 @@ if __name__ == '__main__':
     # draw_data_generate(X_train, train_pos_samples_num, train_neg_samples_num)
     # draw_data_generate(X_test, test_pos_samples_num, test_neg_samples_num)
 
+    regular_coef = 0.0
     logistic = LG.Logistic_Regression_Class(n_feature=2, train_pos_samples_num=train_pos_samples_num,
                                             test_pos_samples_num=test_pos_samples_num,
                                             train_neg_samples_num=train_neg_samples_num,
                                             test_neg_samples_num=test_neg_samples_num,
                                             X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test,
-                                            regular_coef=0.0, verbose=True)
+                                            regular_coef=regular_coef, verbose=True)
     w_nt, train_acc_nt, test_acc_nt, actual_iter_times_nt, train_loss_list_nt = logistic.train(train_method="newton",
                                                                                                train_param=[50, 1e-6],
                                                                                                draw_result=True)
@@ -358,71 +625,75 @@ if __name__ == '__main__':
 
     train_y_pred_nt = logistic.predict(w_nt, X_train)
     test_y_pred_nt = logistic.predict(w_nt, X_test)
-    analysis(y_train, train_y_pred_nt, mode="Train")
-    analysis(y_test, test_y_pred_nt, mode="Test")
+    analysis(y_train, train_y_pred_nt, mode="Newton Method,Train")
+    analysis(y_test, test_y_pred_nt, mode="Newton Method,Test")
 
     train_y_pred_gd = logistic.predict(w_gd, X_train)
     test_y_pred_gd = logistic.predict(w_gd, X_test)
-    analysis(y_train, train_y_pred_gd, mode="Train")
-    analysis(y_test, test_y_pred_gd, mode="Test")
+    analysis(y_train, train_y_pred_gd, mode="Gradient Descent,Train")
+    analysis(y_test, test_y_pred_gd, mode="Gradient Descent,Test")
+
+    os.system("pause")
     # ===========================================================================================
     # 使用breast_cancer数据集进行二分类逻辑回归实验
+    breast_cancer_dataset = datasets.load_breast_cancer()
+    print(breast_cancer_dataset.DESCR)
+    os.system("pause")
+    cancer_X = breast_cancer_dataset.data
 
-    # breast_cancer_dataset = datasets.load_breast_cancer()
-    # cancer_X = breast_cancer_dataset.data
+    print("cancer_X info:")
+    print(pd.DataFrame(cancer_X).info())
+    cancer_y = breast_cancer_dataset.target
 
-    # print("cancer_X info:")
-    # print(pd.DataFrame(cancer_X).info())
-    # cancer_y = breast_cancer_dataset.target
+    print("-------------------------------------------")
+    print("cancer_y info:")
+    print(pd.DataFrame(cancer_y).info())
+    print("-------------------------------------------")
 
-    # print("-------------------------------------------")
-    # print("cancer_y info:")
-    # print(pd.DataFrame(cancer_y).info())
-    # print("-------------------------------------------")
 
-    # def sort_by_label(X, y):
-    #     assert len(X) == len(y)
-    #     X_pos, X_neg = [], []
-    #     y_pos, y_neg = [], []
-    #     pos_num, neg_num = 0, 0
-    #     for i in range(len(y)):
-    #         if y[i] == 1:
-    #             pos_num += 1
-    #             X_pos.append(X[i, :])
-    #             y_pos.append(1)
-    #         elif y[i] == 0:
-    #             neg_num += 1
-    #             X_neg.append(X[i, :])
-    #             y_neg.append(0)
-    #         else:
-    #             assert False
-    #     sorted_X = np.array(X_pos + X_neg)
-    #     sorted_y = np.array(y_pos + y_neg)
-    #     print("sorted_X.shape:", sorted_X.shape)
-    #     print("sorted_y.shape:", sorted_y.shape)
-    #     assert len(sorted_X) == len(sorted_y) == neg_num + pos_num == len(y)
-    #     return sorted_X, sorted_y, pos_num, neg_num
-    #
-    #
-    # X_train, X_test, y_train, y_test = train_test_split(cancer_X, cancer_y, test_size=0.3)
-    # X_train, y_train, train_pos_samples_num, train_neg_samples_num = sort_by_label(X_train, y_train)
-    # X_test, y_test, test_pos_samples_num, test_neg_samples_num = sort_by_label(X_test, y_test)
-    # n_train, n_feature = X_train.shape
-    # n_test = len(X_test)
-    # print("n_train:", n_train, "n_test:", n_test, "n_feature:", n_feature)
-    #
-    # logistic = Logistic_Regression_Class(n_feature=n_feature, train_pos_samples_num=train_pos_samples_num,
-    #                                      test_pos_samples_num=test_pos_samples_num,
-    #                                      train_neg_samples_num=train_neg_samples_num,
-    #                                      test_neg_samples_num=test_neg_samples_num,
-    #                                      X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test,
-    #                                      regular_coef=0.15, verbose=True)
-    #
-    # w, train_acc, test_acc, actual_iter_times, train_loss_list = logistic.train(train_method="newton",
-    #                                                                             train_param=[50, 1e-5],
-    #                                                                             draw_result=False)
-    # train_y_pred = logistic.predict(w, X_train)
-    # test_y_pred = logistic.predict(w, X_test)
-    # analysis(y_train, train_y_pred, mode="Train")
-    # analysis(y_test, test_y_pred, mode="Test")
-    # print("finish")
+    def sort_by_label(X, y):
+        assert len(X) == len(y)
+        X_pos, X_neg = [], []
+        y_pos, y_neg = [], []
+        pos_num, neg_num = 0, 0
+        for i in range(len(y)):
+            if y[i] == 1:
+                pos_num += 1
+                X_pos.append(X[i, :])
+                y_pos.append(1)
+            elif y[i] == 0:
+                neg_num += 1
+                X_neg.append(X[i, :])
+                y_neg.append(0)
+            else:
+                assert False
+        sorted_X = np.array(X_pos + X_neg)
+        sorted_y = np.array(y_pos + y_neg)
+        print("sorted_X.shape:", sorted_X.shape)
+        print("sorted_y.shape:", sorted_y.shape)
+        assert len(sorted_X) == len(sorted_y) == neg_num + pos_num == len(y)
+        return sorted_X, sorted_y, pos_num, neg_num
+
+
+    X_train, X_test, y_train, y_test = train_test_split(cancer_X, cancer_y, test_size=0.3)
+    X_train, y_train, train_pos_samples_num, train_neg_samples_num = sort_by_label(X_train, y_train)
+    X_test, y_test, test_pos_samples_num, test_neg_samples_num = sort_by_label(X_test, y_test)
+    n_train, n_feature = X_train.shape
+    n_test = len(X_test)
+    print("n_train:", n_train, "n_test:", n_test, "n_feature:", n_feature)
+
+    logistic = LG.Logistic_Regression_Class(n_feature=n_feature, train_pos_samples_num=train_pos_samples_num,
+                                            test_pos_samples_num=test_pos_samples_num,
+                                            train_neg_samples_num=train_neg_samples_num,
+                                            test_neg_samples_num=test_neg_samples_num,
+                                            X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test,
+                                            regular_coef=0.15, verbose=True)
+
+    w, train_acc, test_acc, actual_iter_times, train_loss_list = logistic.train(train_method="newton",
+                                                                                train_param=[50, 1e-6],
+                                                                                draw_result=False)
+    train_y_pred = logistic.predict(w, X_train)
+    test_y_pred = logistic.predict(w, X_test)
+    analysis(y_train, train_y_pred, mode="Train")
+    analysis(y_test, test_y_pred, mode="Test")
+    print("finish")

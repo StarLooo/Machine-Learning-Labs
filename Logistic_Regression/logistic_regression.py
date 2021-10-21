@@ -28,7 +28,7 @@ class Logistic_Regression_Class:
         self.verbose = verbose
         self.regular_coef = regular_coef
         self.model_name = "logistic regression with n_feature of " + str(self.n_feature)
-        if regular_coef == 0.:
+        if regular_coef > 0.:
             self.model_name += ", using L2-norm regular, l2 norm coefficient = " + str(regular_coef) + "."
         else:
             self.model_name += ", without regular."
