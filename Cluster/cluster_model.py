@@ -53,18 +53,27 @@ class Cluster(metaclass=abc.ABCMeta):
     # 计算轮廓系数
     def compute_silhouette_coefficient(self, clusters):
         assert clusters.shape == (self.n_samples,)
-        samples_distances_matrix = self._distances(self.train_samples_matrix, self.train_samples_matrix)
+        samples_distances_matrix = self._distances(self.train_samples_matrix, self.train_samples_matrix) ** 0.5
         total_sc = 0
         for cluster_index in range(self.k):
-            mask = (clusters == cluster_index)
-            samples_distances_matrix_in_this_cluster = samples_distances_matrix[mask, :][:, mask]
+            mask_inner = (clusters == cluster_index)
+            samples_distances_matrix_in_this_cluster = samples_distances_matrix[mask_inner, :][:, mask_inner]
             num_in_this_cluster = samples_distances_matrix_in_this_cluster.shape[1]
-            assert num_in_this_cluster > 1
-            a = np.sum(samples_distances_matrix_in_this_cluster, axis=1) / (num_in_this_cluster - 1)
-            samples_distances_matrix_to_other_clusters = samples_distances_matrix[mask, :][:, ~mask]
-            num_not_in_this_cluster = samples_distances_matrix_to_other_clusters.shape[1]
-            assert num_not_in_this_cluster > 0
-            b = np.sum(samples_distances_matrix_to_other_clusters, axis=1) / num_not_in_this_cluster
+            if num_in_this_cluster > 1:
+                a = np.sum(samples_distances_matrix_in_this_cluster, axis=1) / (num_in_this_cluster - 1)
+            else:
+                a = [0 for _ in range(num_in_this_cluster)]
+            b = [1000000 for _ in range(num_in_this_cluster)]
+            for other_cluster_index in range(self.k):
+                if other_cluster_index != cluster_index:
+                    mask_other = (clusters == other_cluster_index)
+                    samples_distances_matrix_to_another_cluster = \
+                        samples_distances_matrix[mask_inner, :][:, mask_other]
+                    num_in_another_cluster = samples_distances_matrix_to_another_cluster.shape[1]
+                    if num_in_another_cluster > 0:
+                        b = np.minimum(b, np.mean(samples_distances_matrix_to_another_cluster, axis=1))
+                    else:
+                        b = [0 for _ in range(num_in_another_cluster)]
             assert a.shape == b.shape == (num_in_this_cluster,)
             total_sc += np.sum((b - a) / np.maximum(a, b))
         mean_sc = total_sc / self.n_samples
@@ -175,8 +184,9 @@ class K_Means(Cluster, ABC):
             plt.scatter(self.init_mean_vectors[:, 0], self.init_mean_vectors[:, 1],
                         marker="x", color="grey", s=40, label="initial center")
             if self.clustered_samples_list is not None:
-                generate_mean_vectors = np.empty((self.k, self.n_features))
-                for cluster_index in range(self.k):
+                actual_k = len(self.clustered_samples_list)
+                generate_mean_vectors = np.empty((actual_k, self.n_features))
+                for cluster_index in range(actual_k):
                     generate_mean_vectors[cluster_index] = np.mean(self.clustered_samples_list[cluster_index], axis=0)
                 plt.scatter(generate_mean_vectors[:, 0], generate_mean_vectors[:, 1], marker="x", color="green", s=40,
                             label="generate center")
@@ -258,7 +268,7 @@ class Gaussian_Mixture_Model(Cluster, ABC):
             mean_vector = mean_vectors[col_index]
             covariance_matrix = covariance_matrixes[col_index]
             P[:, col_index] = multivariate_normal.pdf(x=self.train_samples_matrix, mean=mean_vector,
-                                                      cov=covariance_matrix)
+                                                      cov=covariance_matrix, allow_singular=True)
         return P
 
     def __compute_posterior_probability(self, P, alphas):
@@ -311,8 +321,8 @@ class Gaussian_Mixture_Model(Cluster, ABC):
         G = self.__compute_posterior_probability(P, alphas)
         pred_clusters = np.argmax(G, axis=1)
         if self.verbose:
+            print("silhouette_coefficient:", self.compute_silhouette_coefficient(pred_clusters))
             for i in range(self.k):
-                print("silhouette_coefficient:", self.compute_silhouette_coefficient(pred_clusters))
                 print("--------------------parameters predict-------------------")
                 print("alpha " + str(i) + ":", alphas[i])
                 print("mean_vector " + str(i) + ":", mean_vectors[i])
@@ -336,8 +346,9 @@ class Gaussian_Mixture_Model(Cluster, ABC):
             plt.scatter(self.init_mean_vectors[:, 0], self.init_mean_vectors[:, 1],
                         marker="x", color="grey", s=40, label="initial center")
             if self.clustered_samples_list is not None:
-                generate_mean_vectors = np.empty((self.k, self.n_features))
-                for cluster_index in range(self.k):
+                actual_k = len(self.clustered_samples_list)
+                generate_mean_vectors = np.empty((actual_k, self.n_features))
+                for cluster_index in range(actual_k):
                     generate_mean_vectors[cluster_index] = np.mean(self.clustered_samples_list[cluster_index], axis=0)
                 plt.scatter(generate_mean_vectors[:, 0], generate_mean_vectors[:, 1], marker="x", color="green", s=40,
                             label="generate center")
