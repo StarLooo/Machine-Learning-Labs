@@ -3,8 +3,15 @@ import os
 
 import numpy as np
 from scipy.special import softmax
+import itertools
 
 if __name__ == '__main__':
+    a = range(4)
+    for b in itertools.permutations(a):
+        print(b)
+
+    os.system("pause")
+
     X = np.array([[1, 2, 3], [2, 3, 4], [3, 4, 5]])
     a = np.array([0.1, 0.2, 0.3])
     Y = a.reshape(1, -1) * X

@@ -1,7 +1,9 @@
 # -*- coding: UTF-8 -*-
 import abc
+import itertools
 from abc import ABC
 
+import numpy as np
 from scipy.stats import multivariate_normal
 
 from utils import *
@@ -51,12 +53,12 @@ class Cluster(metaclass=abc.ABCMeta):
             raise NotImplementedError
 
     # 计算轮廓系数
-    def compute_silhouette_coefficient(self, clusters):
-        assert clusters.shape == (self.n_samples,)
+    def compute_silhouette_coefficient(self, pred_clusters):
+        assert pred_clusters.shape == (self.n_samples,)
         samples_distances_matrix = self._distances(self.train_samples_matrix, self.train_samples_matrix) ** 0.5
         total_sc = 0
         for cluster_index in range(self.k):
-            mask_inner = (clusters == cluster_index)
+            mask_inner = (pred_clusters == cluster_index)
             samples_distances_matrix_in_this_cluster = samples_distances_matrix[mask_inner, :][:, mask_inner]
             num_in_this_cluster = samples_distances_matrix_in_this_cluster.shape[1]
             if num_in_this_cluster > 1:
@@ -66,7 +68,7 @@ class Cluster(metaclass=abc.ABCMeta):
             b = [1000000 for _ in range(num_in_this_cluster)]
             for other_cluster_index in range(self.k):
                 if other_cluster_index != cluster_index:
-                    mask_other = (clusters == other_cluster_index)
+                    mask_other = (pred_clusters == other_cluster_index)
                     samples_distances_matrix_to_another_cluster = \
                         samples_distances_matrix[mask_inner, :][:, mask_other]
                     num_in_another_cluster = samples_distances_matrix_to_another_cluster.shape[1]
@@ -74,11 +76,25 @@ class Cluster(metaclass=abc.ABCMeta):
                         b = np.minimum(b, np.mean(samples_distances_matrix_to_another_cluster, axis=1))
                     else:
                         b = [0 for _ in range(num_in_another_cluster)]
-            assert a.shape == b.shape == (num_in_this_cluster,)
+            assert len(a) == len(b) == num_in_this_cluster
             total_sc += np.sum((b - a) / np.maximum(a, b))
         mean_sc = total_sc / self.n_samples
         assert -1.0 <= mean_sc <= 1.0
         return mean_sc
+
+    # 计算精度(仅仅当有参考簇划分并且k的选取与参考一致时才有效)
+    def compute_accuracy(self, pred_clusters, ref_clusters):
+        assert self.clustered_samples_list is not None and len(self.clustered_samples_list) == self.k
+        assert pred_clusters.shape == ref_clusters.shape == (self.n_samples,)
+        accuracy = 0.0
+        correct_num = 0
+        aligned_clusters = np.empty_like(pred_clusters)
+        for align_relation in itertools.permutations(range(self.k)):
+            for cluster_index in range(self.k):
+                aligned_clusters[pred_clusters == cluster_index] = align_relation[cluster_index]
+            accuracy = max(accuracy, np.mean(aligned_clusters == ref_clusters))
+        assert 0.0 <= accuracy <= 1.0
+        return accuracy
 
     # 进行聚类
     @abc.abstractmethod
@@ -199,7 +215,7 @@ class K_Means(Cluster, ABC):
             plt.legend(loc="best")
             plt.xlabel("d_1")
             plt.ylabel("d_2")
-            # plt.savefig(fname=title + ".svg", dpi=10000, format="svg")
+            plt.savefig(fname=title + ".svg", dpi=10000, format="svg")
             plt.show()
 
         return pred_clusters, mean_square_loss, mean_vectors, actual_iter_times
@@ -361,7 +377,7 @@ class Gaussian_Mixture_Model(Cluster, ABC):
             plt.legend(loc="best")
             plt.xlabel("d_1")
             plt.ylabel("d_2")
-            # plt.savefig(fname=title + ".svg", dpi=10000, format="svg")
+            plt.savefig(fname=title + ".svg", dpi=10000, format="svg")
             plt.show()
 
         return pred_clusters, mean_vectors, covariance_matrixes, alphas, actual_iter_times
