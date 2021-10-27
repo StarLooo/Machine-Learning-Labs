@@ -153,7 +153,7 @@ def compare_diff_cluster_method(init_method, repetitions=20):
         params = [5000, 1e-12]
         mean_vector_list = [np.array([0.5, 0.5]), np.array([5.5, 2.5]), np.array([1, 7]), np.array([-3, -3.5])]
         covariance_matrix_list = [np.array([[1, -1], [-1, 2]]), np.array([[1.2, 0.8], [0.8, 1.2]]),
-                                  np.array([[2, 1], [1, 1]]), np.array([[1, 0.5], [0.5, 1]])]  # 样本分布紧凑
+                                  np.array([[2, 1], [1, 1]]), np.array([[1, 0.5], [0.5, 0.8]])]  # 样本分布紧凑
         # covariance_matrix_list = [np.array([[0.25, 0], [0, 0.5]]), np.array([[0.4, 0], [0, 0.5]]),
         #                           np.array([[0.75, 0], [0, 0.5]]), np.array([[0.5, 0], [0, 0.2]])]  # 样本分布疏散
         sample_num_list = [150, 200, 100, 250]
@@ -166,9 +166,7 @@ def compare_diff_cluster_method(init_method, repetitions=20):
             train_samples_matrix, clustered_samples_list, ref_clusters = generate_data(4, n_features, sample_num_list,
                                                                                        mean_vector_list,
                                                                                        covariance_matrix_list)
-            if repeat_num == 1:
-                draw_data_generate(clustered_samples_list)
-            # draw_data_generate(clustered_samples_list)
+
             gmm = cluster_model.Gaussian_Mixture_Model(k, n_features, params, train_samples_matrix,
                                                        clustered_samples_list,
                                                        init_method, verbose)
@@ -200,7 +198,7 @@ def compare_diff_cluster_method(init_method, repetitions=20):
         elif init_method == "heuristic":
             title += " heuristically)"
         plt.title(title)
-        # plt.savefig(fname=title + ".svg", dpi=10000, format="svg")
+        plt.savefig(fname=title + ".svg", dpi=10000, format="svg")
         plt.show()
 
         plt.scatter(range(1, repetitions + 1), gmm_acc_list, marker='o', color='blue', s=10, label="gmm acc")
@@ -217,7 +215,7 @@ def compare_diff_cluster_method(init_method, repetitions=20):
         elif init_method == "heuristic":
             title += " heuristically)"
         plt.title(title)
-        # plt.savefig(fname=title + ".svg", dpi=10000, format="svg")
+        plt.savefig(fname=title + ".svg", dpi=10000, format="svg")
         plt.show()
 
 
@@ -261,28 +259,28 @@ if __name__ == '__main__':
     # os.system("pause")
 
     # 研究GMM的效果
-    k = 3
-    n_features = 2
-    params = [5000, 1e-12]
-    mean_vector_list = [np.array([0.5, 0.5]), np.array([5.5, 2.5]), np.array([1, 7])]
-    # covariance_matrix_list = [np.array([[1, 0], [0, 3]]), np.array([[2, 0], [0, 2]]),
-    #                           np.array([[6, 0], [0, 2]])]  # 样本分布紧凑
-    covariance_matrix_list = [np.array([[0.25, 0], [0, 0.5]]), np.array([[0.4, 0], [0, 0.5]]),
-                              np.array([[0.75, 0], [0, 0.5]])]  # 样本分布疏散
-    sample_num_list = [200, 300, 500]
-    train_samples_matrix, clustered_samples_list, ref_clusters = generate_data(3, n_features, sample_num_list,
-                                                                               mean_vector_list,
-                                                                               covariance_matrix_list)
-    verbose = True
-
-    gmm = cluster_model.Gaussian_Mixture_Model(k, n_features, params, train_samples_matrix, clustered_samples_list,
-                                               "heuristic", verbose)
-    pred_clusters, mean_vectors, covariance_matrixes, alphas, actual_iter_times = gmm.cluster(draw_result=True)
-    print("acc:", gmm.compute_accuracy(pred_clusters, ref_clusters))
-    os.system("pause")
+    # k = 3
+    # n_features = 2
+    # params = [5000, 1e-12]
+    # mean_vector_list = [np.array([0.5, 0.5]), np.array([5.5, 2.5]), np.array([1, 7])]
+    # covariance_matrix_list = [np.array([[1, 1], [1, 3]]), np.array([[2, 1.5], [1.5, 2]]),
+    #                           np.array([[6, 3], [3, 2]])]  # 样本分布紧凑
+    # # covariance_matrix_list = [np.array([[0.25, 0], [0, 0.5]]), np.array([[0.4, 0], [0, 0.5]]),
+    # #                           np.array([[0.75, 0], [0, 0.5]])]  # 样本分布疏散
+    # sample_num_list = [200, 300, 500]
+    # train_samples_matrix, clustered_samples_list, ref_clusters = generate_data(3, n_features, sample_num_list,
+    #                                                                            mean_vector_list,
+    #                                                                            covariance_matrix_list)
+    # verbose = True
+    #
+    # gmm = cluster_model.Gaussian_Mixture_Model(k, n_features, params, train_samples_matrix, clustered_samples_list,
+    #                                            "heuristic", verbose)
+    # pred_clusters, mean_vectors, covariance_matrixes, alphas, actual_iter_times = gmm.cluster(draw_result=True)
+    # print("acc:", gmm.compute_accuracy(pred_clusters, ref_clusters))
+    # os.system("pause")
 
     # 研究GMM和K-Means的聚类效果对比
-    compare_diff_cluster_method(init_method="heuristic")
+    # compare_diff_cluster_method(init_method="heuristic")
     # k = 3
     # n_features = 2
     # params = [1000, 1e-12]
@@ -328,7 +326,7 @@ if __name__ == '__main__':
     # # print(ref_labels)
     # clustered_samples_list = [decomposed_train_samples_matrix[ref_labels == i] for i in range(actual_k)]
     # # draw_data_generate(clustered_samples_list)
-    # params = [100, 1e-12]
+    # params = [5000, 1e-12]
     # verbose = False
     # k_means_sc_list = []
     # gmm_sc_list = []
@@ -354,74 +352,74 @@ if __name__ == '__main__':
     # plt.ylabel("SC")
     # title = "SC of k-means and gmm in different select k in wine dataset"
     # plt.title(title)
-    # # plt.savefig(fname=title + ".svg", dpi=10000, format="svg")
+    # plt.savefig(fname=title + ".svg", dpi=10000, format="svg")
     # plt.show()
     # # 选择k=3测试
     # verbose = True
     # k_means = cluster_model.K_Means(3, n_features, params, decomposed_train_samples_matrix,
     #                                 clustered_samples_list, "heuristic", verbose)
-    # pred_clusters, _, _, _ = k_means.cluster(draw_result=False)
+    # pred_clusters, _, _, _ = k_means.cluster(draw_result=True)
     # print("k-means acc:", k_means.compute_accuracy(pred_clusters, ref_labels))
     #
     # gmm = cluster_model.Gaussian_Mixture_Model(3, n_features, params, decomposed_train_samples_matrix,
     #                                            clustered_samples_list, "heuristic", verbose)
-    # pred_clusters, _, _, _, _ = gmm.cluster(draw_result=False)
-    # print("gmm acc:", gmm.compute_accuracy(pred_clusters, ref_labels))
-
-    # 在iris真实数据集上进行实验
-    # iris_data = load_iris()
-    # select_k_range = range(2, 8)
-    # actual_k = 3
-    # print(iris_data.DESCR)
-    # train_samples_matrix = iris_data.data
-    # train_samples_matrix = train_samples_matrix / train_samples_matrix.max(axis=0)  # 按列归一化
-    # # print("train_samples_matrix:")
-    # # print(train_samples_matrix)
-    # correlation_matrix = pd.DataFrame(train_samples_matrix).corr()
-    # print(correlation_matrix)
-    # n_samples, n_features = train_samples_matrix.shape
-    # print("train_samples_matrix.shape:", train_samples_matrix.shape)
-    # ref_labels = iris_data.target
-    # # print("ref_labels")  # ref_labels表明原数据矩阵是已经按类排好的
-    # # print(ref_labels)
-    # clustered_samples_list = [train_samples_matrix[ref_labels == i] for i in range(actual_k)]
-    # # draw_data_generate(clustered_samples_list)
-    # params = [100, 1e-12]
-    # verbose = False
-    # k_means_sc_list = []
-    # gmm_sc_list = []
-    # # 根据轮廓系数选择k
-    # for select_k in select_k_range:
-    #     k_means = cluster_model.K_Means(select_k, n_features, params, train_samples_matrix,
-    #                                     clustered_samples_list, "heuristic", verbose)
-    #     pred_clusters, _, _, _ = k_means.cluster(draw_result=False)
-    #     sc = k_means.compute_silhouette_coefficient(pred_clusters)
-    #     k_means_sc_list.append(sc)
-    #
-    #     gmm = cluster_model.Gaussian_Mixture_Model(select_k, n_features, params, train_samples_matrix,
-    #                                                clustered_samples_list, "heuristic", verbose)
-    #     pred_clusters, _, _, _, _ = gmm.cluster(draw_result=False)
-    #     sc = gmm.compute_silhouette_coefficient(pred_clusters)
-    #     gmm_sc_list.append(sc)
-    # plt.scatter(select_k_range, k_means_sc_list, marker='o', color='blue', s=10, label="k-means sc")
-    # plt.plot(select_k_range, k_means_sc_list, color='blue', linewidth=1.0, linestyle='-')
-    # plt.scatter(select_k_range, gmm_sc_list, marker='o', color='red', s=10, label="gmm sc")
-    # plt.plot(select_k_range, gmm_sc_list, color='red', linewidth=1.0, linestyle='-')
-    # plt.legend(loc="best")
-    # plt.xlabel("select k")
-    # plt.ylabel("SC")
-    # title = "SC of k-means and gmm in different select k in iris dataset"
-    # plt.title(title)
-    # # plt.savefig(fname=title + ".svg", dpi=10000, format="svg")
-    # plt.show()
-    # # 选择k=3测试
-    # k_means = cluster_model.K_Means(3, n_features, params, train_samples_matrix,
-    #                                 clustered_samples_list, "heuristic", verbose)
-    # pred_clusters, _, _, _ = k_means.cluster(draw_result=False)
-    # print("k-means acc:", k_means.compute_accuracy(pred_clusters, ref_labels))
-    #
-    # gmm = cluster_model.Gaussian_Mixture_Model(3, n_features, params, train_samples_matrix,
-    #                                            clustered_samples_list, "heuristic", verbose)
-    # pred_clusters, _, _, _, _ = gmm.cluster(draw_result=False)
+    # pred_clusters, _, _, _, _ = gmm.cluster(draw_result=True)
     # print("gmm acc:", gmm.compute_accuracy(pred_clusters, ref_labels))
     # os.system("pause")
+
+    # 在iris真实数据集上进行实验
+    iris_data = load_iris()
+    select_k_range = range(2, 8)
+    actual_k = 3
+    # print(iris_data.DESCR)
+    train_samples_matrix = iris_data.data
+    # train_samples_matrix = train_samples_matrix / train_samples_matrix.max(axis=0)  # 按列归一化
+    # print("train_samples_matrix:")
+    # print(train_samples_matrix)
+    correlation_matrix = pd.DataFrame(train_samples_matrix).corr()
+    n_samples, n_features = train_samples_matrix.shape
+    # print("train_samples_matrix.shape:", train_samples_matrix.shape)
+    ref_labels = iris_data.target
+    # print("ref_labels")  # ref_labels表明原数据矩阵是已经按类排好的
+    # print(ref_labels)
+    clustered_samples_list = [train_samples_matrix[ref_labels == i] for i in range(actual_k)]
+    # draw_data_generate(clustered_samples_list)
+    params = [100, 1e-12]
+    verbose = False
+    k_means_sc_list = []
+    gmm_sc_list = []
+    # 根据轮廓系数选择k
+    for select_k in select_k_range:
+        k_means = cluster_model.K_Means(select_k, n_features, params, train_samples_matrix,
+                                        clustered_samples_list, "heuristic", verbose)
+        pred_clusters, _, _, _ = k_means.cluster(draw_result=False)
+        sc = k_means.compute_silhouette_coefficient(pred_clusters)
+        k_means_sc_list.append(sc)
+
+        gmm = cluster_model.Gaussian_Mixture_Model(select_k, n_features, params, train_samples_matrix,
+                                                   clustered_samples_list, "heuristic", verbose)
+        pred_clusters, _, _, _, _ = gmm.cluster(draw_result=False)
+        sc = gmm.compute_silhouette_coefficient(pred_clusters)
+        gmm_sc_list.append(sc)
+    plt.scatter(select_k_range, k_means_sc_list, marker='o', color='blue', s=10, label="k-means sc")
+    plt.plot(select_k_range, k_means_sc_list, color='blue', linewidth=1.0, linestyle='-')
+    plt.scatter(select_k_range, gmm_sc_list, marker='o', color='red', s=10, label="gmm sc")
+    plt.plot(select_k_range, gmm_sc_list, color='red', linewidth=1.0, linestyle='-')
+    plt.legend(loc="best")
+    plt.xlabel("select k")
+    plt.ylabel("SC")
+    title = "SC of k-means and gmm in different select k in iris dataset"
+    plt.title(title)
+    plt.savefig(fname=title + ".svg", dpi=10000, format="svg")
+    plt.show()
+    # 选择k=3测试
+    k_means = cluster_model.K_Means(3, n_features, params, train_samples_matrix,
+                                    clustered_samples_list, "heuristic", verbose)
+    pred_clusters, _, _, _ = k_means.cluster(draw_result=False)
+    print("k-means acc:", k_means.compute_accuracy(pred_clusters, ref_labels))
+
+    gmm = cluster_model.Gaussian_Mixture_Model(3, n_features, params, train_samples_matrix,
+                                               clustered_samples_list, "heuristic", verbose)
+    pred_clusters, _, _, _, _ = gmm.cluster(draw_result=False)
+    print("gmm acc:", gmm.compute_accuracy(pred_clusters, ref_labels))
+    os.system("pause")
